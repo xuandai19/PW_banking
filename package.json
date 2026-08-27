@@ -1,0 +1,22 @@
+{
+  "name": "banking-management-backend",
+  "version": "1.0.0",
+  "description": "REST API for Banking Management System",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
+    "db:init": "node scripts/initDb.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.19.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "nodemailer": "^6.9.16",
+    "mysql2": "^3.11.0"
+  }
+}
