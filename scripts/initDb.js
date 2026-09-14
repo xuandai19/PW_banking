@@ -284,6 +284,32 @@ async function main() {
         }
     }
 
+    const [nameIndexes] = await pool.query(
+        `SELECT COUNT(*) AS c FROM information_schema.statistics
+         WHERE table_schema = ? AND table_name = 'banks' AND column_name = 'name' AND non_unique = 0`,
+        [DB_NAME]
+    );
+    if (Number(nameIndexes[0].c) === 0) {
+        try {
+            await pool.query("ALTER TABLE banks ADD UNIQUE INDEX uk_banks_name (name)");
+        } catch (err) {
+            console.warn("[Integrity] Không thể tạo unique index banks.name:", err.message);
+        }
+    }
+
+    const [branchNameIndexes] = await pool.query(
+        `SELECT COUNT(*) AS c FROM information_schema.statistics
+         WHERE table_schema = ? AND table_name = 'branches' AND index_name = 'uk_branches_bank_name'`,
+        [DB_NAME]
+    );
+    if (Number(branchNameIndexes[0].c) === 0) {
+        try {
+            await pool.query("ALTER TABLE branches ADD UNIQUE INDEX uk_branches_bank_name (bank_id, name)");
+        } catch (err) {
+            console.warn("[Integrity] Không thể tạo unique index branches(bank_id, name):", err.message);
+        }
+    }
+
     await pool.end();
     console.log("\nDone. MySQL sẵn sàng.");
     console.log("Chạy server: npm start");

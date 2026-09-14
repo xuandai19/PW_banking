@@ -15,11 +15,16 @@ class BankService {
         }
         if (!name || !code || !address) throw new Error("Thiếu thông tin ngân hàng.");
         const existingBanks = await bankRepository.findAll();
-        if (existingBanks.some(b => String(b.code).toLowerCase() === String(code).trim().toLowerCase())) {
+        const nameNorm = String(name).trim().toLowerCase();
+        const codeNorm = String(code).trim().toLowerCase();
+        if (existingBanks.some(b => String(b.code).toLowerCase() === codeNorm)) {
             throw new Error("Mã ngân hàng đã tồn tại.");
         }
+        if (existingBanks.some(b => String(b.name).trim().toLowerCase() === nameNorm)) {
+            throw new Error("Tên ngân hàng đã tồn tại. Không được tạo ngân hàng trùng tên.");
+        }
 
-        const bank = await bankRepository.create(new Bank(null, name, code, address));
+        const bank = await bankRepository.create(new Bank(null, String(name).trim(), String(code).trim(), String(address).trim()));
 
         // Tự động tạo tài khoản quản lý Bank:
         // username = mã bank (passcode), email = username@banking.local, password = mã bank (chữ thường) hoặc 123456
@@ -45,9 +50,22 @@ class BankService {
     async update(id, data) {
         const bank = await bankRepository.findById(id);
         if (!bank) throw new Error("Không tìm thấy Bank.");
-        if (data.name !== undefined) bank.name = data.name;
-        if (data.code !== undefined) bank.code = data.code;
-        if (data.address !== undefined) bank.address = data.address;
+        const existingBanks = await bankRepository.findAll();
+        if (data.name !== undefined) {
+            const nameNorm = String(data.name).trim().toLowerCase();
+            if (existingBanks.some(b => b.id !== Number(id) && String(b.name).trim().toLowerCase() === nameNorm)) {
+                throw new Error("Tên ngân hàng đã tồn tại. Không được cập nhật trùng tên.");
+            }
+            bank.name = String(data.name).trim();
+        }
+        if (data.code !== undefined) {
+            const codeNorm = String(data.code).trim().toLowerCase();
+            if (existingBanks.some(b => b.id !== Number(id) && String(b.code).toLowerCase() === codeNorm)) {
+                throw new Error("Mã ngân hàng đã tồn tại.");
+            }
+            bank.code = String(data.code).trim();
+        }
+        if (data.address !== undefined) bank.address = String(data.address).trim();
         return bankRepository.update(bank);
     }
 
@@ -64,6 +82,6 @@ class BankService {
         const systemUser = (await adminRepository.findAll()).find(u => u.role === Admin.ROLE_BANK && u.bankId === Number(id));
         if (systemUser) await adminRepository.delete(systemUser.id);
         await bankRepository.delete(id);
-            }
+    }
 }
 module.exports = new BankService();

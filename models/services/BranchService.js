@@ -31,8 +31,16 @@ class BranchService {
             const bankRepository = require("../repositories/BankRepository");
             if (!(await bankRepository.findById(Number(bankId)))) throw new Error("Không tìm thấy ngân hàng.");
         }
+        // Không cho phép trùng tên chi nhánh trong cùng một ngân hàng
+        if (bankId != null) {
+            const siblings = await branchRepository.findByBankId(Number(bankId));
+            const nameNorm = String(name).trim().toLowerCase();
+            if (siblings.some(b => String(b.name).trim().toLowerCase() === nameNorm)) {
+                throw new Error("Tên chi nhánh đã tồn tại trong ngân hàng này. Không được tạo chi nhánh trùng tên.");
+            }
+        }
         const branch = await branchRepository.create(
-            Object.assign(new Branch(null, name, address, phone), { bankId: bankId ? Number(bankId) : null })
+            Object.assign(new Branch(null, String(name).trim(), String(address).trim(), phone ? String(phone).trim() : null), { bankId: bankId ? Number(bankId) : null })
         );
 
         // Tài khoản quản lý Branch:
@@ -85,9 +93,21 @@ class BranchService {
     async update(id, data) {
         const branch = await branchRepository.findById(id);
         if (!branch) throw new Error("Không tìm thấy chi nhánh.");
-        if (data.name !== undefined) branch.name = data.name;
-        if (data.address !== undefined) branch.address = data.address;
-        if (data.phone !== undefined) branch.phone = data.phone;
+        const targetBankId = data.bankId !== undefined
+            ? (data.bankId === null ? null : Number(data.bankId))
+            : branch.bankId;
+        if (data.name !== undefined) {
+            const nameNorm = String(data.name).trim().toLowerCase();
+            if (targetBankId != null) {
+                const siblings = await branchRepository.findByBankId(Number(targetBankId));
+                if (siblings.some(b => b.id !== Number(id) && String(b.name).trim().toLowerCase() === nameNorm)) {
+                    throw new Error("Tên chi nhánh đã tồn tại trong ngân hàng này. Không được cập nhật trùng tên.");
+                }
+            }
+            branch.name = String(data.name).trim();
+        }
+        if (data.address !== undefined) branch.address = String(data.address).trim();
+        if (data.phone !== undefined) branch.phone = data.phone ? String(data.phone).trim() : null;
         if (data.bankId !== undefined) {
             const bankRepository = require("../repositories/BankRepository");
             if (data.bankId !== null && !(await bankRepository.findById(Number(data.bankId)))) {

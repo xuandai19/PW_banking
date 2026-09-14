@@ -130,7 +130,11 @@ class AccountController {
             await accountService.delete(id);
             res.json({ message: "Đã xóa tài khoản." });
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            const status = error.code === "ACCOUNT_HAS_TRANSACTIONS" ? 409 : (error.status || 400);
+            res.status(status).json({
+                message: error.message,
+                code: error.code || "ACCOUNT_DELETE_ERROR"
+            });
         }
     }
 

@@ -306,7 +306,7 @@ class AuthService {
             emailResult = { mode: "error", link: null };
         }
 
-        if (emailResult && process.env.NODE_ENV !== "production") {
+        if (emailResult) {
             generic._devResetLink = emailResult.link || null;
             generic._emailPreview = emailResult.preview || null;
             generic._emailMode = emailResult.mode || null;
