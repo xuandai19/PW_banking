@@ -49,7 +49,26 @@ class AccountService {
         account.branchId = Number(branchId);
         account.bankId = Number(branch.bankId);
 
+<<<<<<< HEAD
         return accountRepository.create(account);
+=======
+        const created = await accountRepository.create(account);
+
+        // Tự động tạo login khách hàng (username = số TK, mật khẩu mặc định)
+        try {
+            const customerService = require("./CustomerService");
+            const customer = await customerService.createForAccount(created);
+            created.customerLogin = {
+                username: customer.username,
+                defaultPassword: customer._defaultPassword || customerService.getDefaultPassword(),
+                mustChangePassword: true
+            };
+        } catch (err) {
+            console.warn("[Account] Tạo customer login thất bại:", err.message);
+        }
+
+        return created;
+>>>>>>> feature/v2_user
     }
 
     async cleanupOrphanAccounts() {

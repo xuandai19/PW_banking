@@ -215,10 +215,49 @@ async function sendResetPasswordEmail(user, token) {
     return { ...result, link };
 }
 
+<<<<<<< HEAD
+=======
+async function sendCustomerResetPasswordEmail(user, token) {
+    const link = `${FRONTEND_URL}/customer/reset-password?token=${token}`;
+    const subject = "Đặt lại mật khẩu Portal Khách hàng – Banking System";
+    const text = [
+        `Xin chào ${user.fullName || user.username},`,
+        "",
+        "Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu portal khách hàng. Mở liên kết sau để đổi mật khẩu mới:",
+        link,
+        "",
+        "Liên kết có hiệu lực trong 1 giờ.",
+        "Nếu bạn không yêu cầu, hãy bỏ qua email này."
+    ].join("\n");
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:12px">
+        <h2 style="color:#1565c0;margin-top:0">Đặt lại mật khẩu khách hàng</h2>
+        <p>Xin chào <strong>${user.fullName || user.username}</strong>,</p>
+        <p>Nhấn nút bên dưới để tạo mật khẩu mới cho tài khoản <strong>${user.username}</strong>.</p>
+        <p style="text-align:center;margin:28px 0">
+          <a href="${link}" style="background:#1565c0;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">
+            Đặt lại mật khẩu
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px">Hoặc copy link: <br/><a href="${link}">${link}</a></p>
+        <p style="color:#999;font-size:12px">Link hết hạn sau 1 giờ. Nếu không phải bạn yêu cầu, hãy bỏ qua email này.</p>
+      </div>
+    `;
+
+    const result = await sendMail({ to: user.email, subject, html, text });
+    return { ...result, link };
+}
+
+>>>>>>> feature/v2_user
 module.exports = {
     generateToken,
     sendVerificationEmail,
     sendResetPasswordEmail,
+<<<<<<< HEAD
+=======
+    sendCustomerResetPasswordEmail,
+>>>>>>> feature/v2_user
     initEmail,
     FRONTEND_URL,
     EMAIL_MODE

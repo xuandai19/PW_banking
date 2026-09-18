@@ -61,12 +61,38 @@ class TransactionRepository {
 
     async findByAccountId(accountId) {
         const rows = await query(
+<<<<<<< HEAD
             `SELECT * FROM transactions
              WHERE account_id = ? OR from_account_id = ? OR to_account_id = ?
              ORDER BY id DESC`,
             [accountId, accountId, accountId]
         );
         return rows.map(mapRow);
+=======
+            `SELECT t.*,
+                    a_from.account_number AS from_account_number,
+                    a_from.owner_name AS from_owner_name,
+                    a_to.account_number AS to_account_number,
+                    a_to.owner_name AS to_owner_name
+             FROM transactions t
+             LEFT JOIN accounts a_from ON t.from_account_id = a_from.id
+             LEFT JOIN accounts a_to   ON t.to_account_id   = a_to.id
+             WHERE t.account_id = ? OR t.from_account_id = ? OR t.to_account_id = ?
+             ORDER BY t.id DESC`,
+            [accountId, accountId, accountId]
+        );
+        return rows.map((row) => {
+            const base = mapRow(row);
+            if (!base) return null;
+            return {
+                ...base,
+                fromAccountNumber: row.from_account_number || null,
+                fromOwnerName: row.from_owner_name || null,
+                toAccountNumber: row.to_account_number || null,
+                toOwnerName: row.to_owner_name || null
+            };
+        });
+>>>>>>> feature/v2_user
     }
 
     /**
