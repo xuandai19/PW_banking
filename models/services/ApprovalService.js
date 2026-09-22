@@ -80,7 +80,8 @@ class ApprovalService {
                     ownerName: payload.ownerName,
                     balance: Number(payload.balance || 0),
                     branchId: Number(payload.branchId),
-                    status: payload.status || "ACTIVE"
+                    status: payload.status || "ACTIVE",
+                    email: payload.email
                 });
             case "UPDATE_ACCOUNT":
                 return accountService.update(Number(payload.id), payload.data || {});

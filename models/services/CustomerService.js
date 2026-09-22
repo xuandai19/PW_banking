@@ -4,7 +4,11 @@ const accountRepository = require("../repositories/AccountRepository");
 const transactionService = require("./TransactionService");
 const accountService = require("./AccountService");
 const { hashPassword, comparePassword, isHashedPassword } = require("../../utils/password");
-const { generateToken, sendCustomerResetPasswordEmail } = require("../../utils/email");
+const {
+    generateToken,
+    sendCustomerResetPasswordEmail,
+    FRONTEND_URL
+} = require("../../utils/email");
 
 const DEFAULT_PASSWORD = process.env.CUSTOMER_DEFAULT_PASSWORD || "Banking@123";
 /** Token khách hàng hết hạn sau 15 giây (theo yêu cầu demo) */
@@ -66,13 +70,29 @@ class CustomerService {
      * Tạo login khách hàng khi staff tạo Account.
      * Username mặc định = số tài khoản.
      * Mật khẩu mặc định = Banking@123 (hoặc CUSTOMER_DEFAULT_PASSWORD).
+     * Email bắt buộc và phải duy nhất – dùng cho quên mật khẩu.
      */
-    async createForAccount(account, email = null) {
+    async createForAccount(account, email) {
         if (!account?.id || !account.accountNumber) {
             throw new Error("Thiếu thông tin tài khoản để tạo khách hàng.");
         }
+        if (!email || !isValidEmail(email)) {
+            throw new Error("Email khách hàng là bắt buộc và phải hợp lệ.");
+        }
         const existing = await customerRepository.findByAccountId(account.id);
-        if (existing) return toSafeCustomer(existing);
+        if (existing) {
+            // Nếu đã có customer nhưng thiếu email → cập nhật email (một lần)
+            if (!existing.email) {
+                const normalized = String(email).trim().toLowerCase();
+                const byEmail = await customerRepository.findByEmail(normalized);
+                if (byEmail && byEmail.id !== existing.id) {
+                    throw new Error(`Email ${normalized} đã được sử dụng.`);
+                }
+                await customerRepository.update(existing.id, { email: normalized });
+                return toSafeCustomer(await customerRepository.findById(existing.id));
+            }
+            return toSafeCustomer(existing);
+        }
 
         const username = String(account.accountNumber).trim();
         const byUser = await customerRepository.findByUsername(username);
@@ -80,13 +100,10 @@ class CustomerService {
             throw new Error(`Username ${username} đã tồn tại.`);
         }
 
-        let normalizedEmail = null;
-        if (email && isValidEmail(email)) {
-            normalizedEmail = String(email).trim().toLowerCase();
-            const byEmail = await customerRepository.findByEmail(normalizedEmail);
-            if (byEmail) {
-                throw new Error(`Email ${normalizedEmail} đã được sử dụng.`);
-            }
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const byEmail = await customerRepository.findByEmail(normalizedEmail);
+        if (byEmail) {
+            throw new Error(`Email ${normalizedEmail} đã được sử dụng.`);
         }
 
         const customer = new Customer(
@@ -103,6 +120,7 @@ class CustomerService {
         const created = await customerRepository.create(customer);
         const safe = toSafeCustomer(created);
         safe._defaultPassword = DEFAULT_PASSWORD;
+        safe.email = normalizedEmail;
         return safe;
     }
 
@@ -432,18 +450,40 @@ class CustomerService {
     }
 
     /**
-     * Quên mật khẩu – gửi link reset tới đúng email của user.
+     * Quên mật khẩu – chỉ gửi link tới đúng email đã đăng ký của tài khoản.
+     * Mọi customer đều bắt buộc có email riêng.
+     * Tra cứu: email | username (số TK) | account number.
      */
-    async forgotPassword({ username, email }) {
+    async forgotPassword({ username, email, accountNumber }) {
         let customer = null;
-        if (email) {
-            customer = await customerRepository.findByEmail(String(email).trim().toLowerCase());
-        } else if (username) {
-            customer = await customerRepository.findByUsername(String(username).trim());
+        const emailInput = email ? String(email).trim().toLowerCase() : "";
+        const usernameInput = username
+            ? String(username).trim()
+            : accountNumber
+              ? String(accountNumber).trim()
+              : "";
+
+        if (emailInput) {
+            customer = await customerRepository.findByEmail(emailInput);
+        }
+        if (!customer && usernameInput) {
+            customer = await customerRepository.findByUsername(usernameInput);
+        }
+        if (!customer && usernameInput) {
+            try {
+                const account = await accountRepository.findByAccountNumber(usernameInput);
+                if (account?.id) {
+                    customer = await customerRepository.findByAccountId(account.id);
+                }
+            } catch {
+                /* ignore */
+            }
         }
 
+        // Không tiết lộ tài khoản có tồn tại hay không.
         const generic = {
-            message: "Nếu tài khoản tồn tại và có email, hướng dẫn đặt lại mật khẩu đã được gửi."
+            message:
+                "Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi tới email đăng ký của tài khoản đó."
         };
 
         if (!customer || !customer.email) return generic;
@@ -455,30 +495,44 @@ class CustomerService {
             resetToken,
             resetTokenExpires
         });
-        const refreshed = await customerRepository.findById(customer.id);
 
-        let emailResult;
         try {
-            emailResult = await sendCustomerResetPasswordEmail(
+            const emailResult = await sendCustomerResetPasswordEmail(
                 {
-                    fullName: refreshed.fullName,
-                    username: refreshed.username,
-                    email: refreshed.email
+                    fullName: customer.fullName,
+                    username: customer.username,
+                    email: customer.email
                 },
                 resetToken
             );
-        } catch (err) {
-            console.error("[Email] Gửi mail reset customer thất bại:", err.message);
-            emailResult = { mode: "error", link: null };
-        }
 
-        if (emailResult) {
-            generic._devResetLink = emailResult.link || null;
+            console.log(
+                `[Customer Password Reset] Sent to ${customer.email} | username=${customer.username}`
+            );
+
+            generic.message =
+                "Hướng dẫn đặt lại mật khẩu đã được gửi tới email đăng ký của tài khoản.";
+            generic._devResetLink =
+                emailResult.link ||
+                `${FRONTEND_URL}/customer/reset-password?token=${encodeURIComponent(resetToken)}`;
             generic._emailPreview = emailResult.preview || null;
             generic._emailMode = emailResult.mode || null;
-            generic._sentTo = refreshed.email;
+            generic._sentTo = customer.email;
+            return generic;
+        } catch (err) {
+            console.error(
+                `[Email] Gửi mail reset customer thất bại tới ${customer.email}:`,
+                err.message
+            );
+            // Hủy token nếu không gửi được mail
+            await customerRepository.update(customer.id, {
+                resetToken: null,
+                resetTokenExpires: null
+            });
+            throw new Error(
+                "Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại hoặc kiểm tra cấu hình email."
+            );
         }
-        return generic;
     }
 
     async resetPassword(token, newPassword) {

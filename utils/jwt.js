@@ -16,13 +16,6 @@ function sign(input) {
     return crypto.createHmac("sha256", SECRET).update(input).digest("base64url");
 }
 
-<<<<<<< HEAD
-//tạo JWT
-function encode(payload = {}) {
-    const now = Math.floor(Date.now() / 1000);
-    const header = { alg: "HS256", typ: "JWT" };
-    const body = { ...payload, iat: now, exp: now + EXPIRES_IN_SECONDS };
-=======
 //tạo JWT – expiresInSeconds tùy chọn (mặc định JWT_EXPIRES_IN_SECONDS)
 function encode(payload = {}, expiresInSeconds) {
     const now = Math.floor(Date.now() / 1000);
@@ -31,7 +24,6 @@ function encode(payload = {}, expiresInSeconds) {
         : EXPIRES_IN_SECONDS;
     const header = { alg: "HS256", typ: "JWT" };
     const body = { ...payload, iat: now, exp: now + ttl };
->>>>>>> feature/v2_user
     const encodedHeader = base64url(JSON.stringify(header));
     const encodedBody = base64url(JSON.stringify(body));
     const unsigned = `${encodedHeader}.${encodedBody}`;
@@ -66,8 +58,4 @@ function decode(token) {
     }
 }
 
-<<<<<<< HEAD
-module.exports = { encode, decode };
-=======
 module.exports = { encode, decode, EXPIRES_IN_SECONDS };
->>>>>>> feature/v2_user

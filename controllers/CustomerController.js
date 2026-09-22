@@ -209,7 +209,8 @@ class CustomerController {
             const result = await customerService.forgotPassword(req.body || {});
             res.json(result);
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            console.error("[CustomerForgotPassword]", error.message);
+            res.status(500).json({ message: error.message });
         }
     }
 

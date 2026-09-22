@@ -71,8 +71,6 @@ async function ensureSchema() {
             console.warn(`[MySQL] Migration ${m.name} skipped:`, err.message);
         }
     }
-<<<<<<< HEAD
-=======
 
     // Bảng customers – portal khách hàng (login, số dư, nạp/rút, chuyển khoản, log)
     try {
@@ -139,7 +137,6 @@ async function ensureSchema() {
             console.warn(`[MySQL] Migration ${m.name} skipped:`, err.message);
         }
     }
->>>>>>> feature/v2_user
 }
 
 module.exports = {

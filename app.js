@@ -8,10 +8,7 @@ const branchRoutes = require("./routes/branch.routes");
 const transactionRoutes = require("./routes/transaction.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const approvalRoutes = require("./routes/approval.routes");
-<<<<<<< HEAD
-=======
 const customerRoutes = require("./routes/customer.routes");
->>>>>>> feature/v2_user
 const { testConnection, ensureSchema } = require("./config/db");
 const { initEmail } = require("./utils/email");
 const authService = require("./models/services/AuthService");
@@ -32,10 +29,7 @@ app.get("/api/health", async (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-<<<<<<< HEAD
-=======
 app.use("/api/customer", customerRoutes);
->>>>>>> feature/v2_user
 app.use("/api/branches", branchRoutes);
 app.use("/api/banks", require("./routes/bank.routes"));
 app.use("/api/accounts", accountRoutes);

@@ -112,7 +112,10 @@ CREATE TABLE IF NOT EXISTS approvals (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> feature/v3_user_forgot
 
 -- Portal khách hàng (chủ tài khoản): login, xem số dư, nạp/rút, lịch sử
 CREATE TABLE IF NOT EXISTS customers (
@@ -129,4 +132,7 @@ CREATE TABLE IF NOT EXISTS customers (
     ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX idx_customers_username (username)
 );
+<<<<<<< HEAD
 >>>>>>> feature/v2_user
+=======
+>>>>>>> feature/v3_user_forgot

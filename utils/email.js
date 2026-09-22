@@ -81,8 +81,9 @@ async function getTransporter() {
             const secure = String(process.env.SMTP_SECURE || "false") === "true";
 
             if (!host || !user || !pass) {
-                console.warn("[Email] SMTP chưa cấu hình đủ → fallback console");
-                return null;
+                throw new Error(
+                    "SMTP chưa được cấu hình. Cần SMTP_HOST, SMTP_USER và SMTP_PASS để gửi email thật."
+                );
             }
 
             return nodemailer.createTransport({
@@ -100,21 +101,12 @@ async function getTransporter() {
     return transporterPromise;
 }
 
-/** Khởi tạo transporter sớm (gọi từ app.js khi server start) */
-async function initEmail() {
-    const t = await getTransporter();
-    if (t && EMAIL_MODE === "ethereal") {
-        console.log("[Email] Ethereal sẵn sàng – mail test sẽ có preview URL.");
-    } else if (!t) {
-        console.log("[Email] Đang dùng console mode – link verify/reset in ra terminal.");
-    } else {
-        console.log("[Email] SMTP transporter sẵn sàng.");
-    }
-    return t;
-}
-
 async function sendMail({ to, subject, html, text }) {
     const transporter = await getTransporter();
+
+    if (!transporter && EMAIL_MODE === "smtp") {
+        throw new Error("Không thể khởi tạo SMTP transporter. Kiểm tra cấu hình SMTP.");
+    }
 
     if (!transporter) {
         console.log("\n========== EMAIL (CONSOLE MODE) ==========");
@@ -138,11 +130,6 @@ async function sendMail({ to, subject, html, text }) {
         preview = nodemailer.getTestMessageUrl(info);
     }
 
-    if (preview) {
-        console.log("[Email] Preview URL (mở để xem mail):", preview);
-    }
-
-    console.log("[Email] Sent to", to, "| messageId:", info.messageId);
     return {
         mode: EMAIL_MODE,
         preview,
@@ -215,10 +202,8 @@ async function sendResetPasswordEmail(user, token) {
     return { ...result, link };
 }
 
-<<<<<<< HEAD
-=======
 async function sendCustomerResetPasswordEmail(user, token) {
-    const link = `${FRONTEND_URL}/customer/reset-password?token=${token}`;
+    const link = `${FRONTEND_URL}/customer/reset-password?token=${encodeURIComponent(token)}`;
     const subject = "Đặt lại mật khẩu Portal Khách hàng – Banking System";
     const text = [
         `Xin chào ${user.fullName || user.username},`,
@@ -249,15 +234,11 @@ async function sendCustomerResetPasswordEmail(user, token) {
     return { ...result, link };
 }
 
->>>>>>> feature/v2_user
 module.exports = {
     generateToken,
     sendVerificationEmail,
     sendResetPasswordEmail,
-<<<<<<< HEAD
-=======
     sendCustomerResetPasswordEmail,
->>>>>>> feature/v2_user
     initEmail,
     FRONTEND_URL,
     EMAIL_MODE

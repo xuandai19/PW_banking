@@ -16,7 +16,10 @@ class AccountController {
 
     async create(req, res) {
         try {
-            const { accountNumber, ownerName, balance, branchId, status } = req.body;
+            const { accountNumber, ownerName, balance, branchId, status, email } = req.body;
+            if (!email || !String(email).trim()) {
+                return res.status(400).json({ message: "Email khách hàng là bắt buộc." });
+            }
             const branchService = require("../models/services/BranchService");
             const branch = await branchService.findById(Number(branchId));
             if (!branch) return res.status(400).json({ message: "Tài khoản bắt buộc phải thuộc một Branch hợp lệ." });
@@ -29,7 +32,8 @@ class AccountController {
                     description: `Tạo tài khoản ${accountNumber}`,
                     requestedBy: req.user.username,
                     requestedRole: req.user.role,
-                    payload: { accountNumber, ownerName, balance, branchId, status }
+
+                    payload: { accountNumber, ownerName, balance, branchId, status, email }
                 });
                 return res.status(202).json({
                     message: "Yêu cầu tạo tài khoản đã gửi chờ duyệt.",
@@ -37,7 +41,14 @@ class AccountController {
                 });
             }
 
-            const account = await accountService.create(accountNumber, ownerName, balance, branchId, status);
+            const account = await accountService.create({
+                accountNumber,
+                ownerName,
+                balance,
+                branchId,
+                status,
+                email
+            });
             res.status(201).json(account);
         } catch (error) {
             res.status(400).json({ message: error.message });

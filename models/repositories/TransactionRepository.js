@@ -61,14 +61,6 @@ class TransactionRepository {
 
     async findByAccountId(accountId) {
         const rows = await query(
-<<<<<<< HEAD
-            `SELECT * FROM transactions
-             WHERE account_id = ? OR from_account_id = ? OR to_account_id = ?
-             ORDER BY id DESC`,
-            [accountId, accountId, accountId]
-        );
-        return rows.map(mapRow);
-=======
             `SELECT t.*,
                     a_from.account_number AS from_account_number,
                     a_from.owner_name AS from_owner_name,
@@ -92,7 +84,6 @@ class TransactionRepository {
                 toOwnerName: row.to_owner_name || null
             };
         });
->>>>>>> feature/v2_user
     }
 
     /**

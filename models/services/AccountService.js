@@ -6,7 +6,7 @@ const { withTransaction } = require("../../config/db");
 class AccountService {
 
     async create(...args) {
-        let accountNumber, ownerName, balance = 0, status = "ACTIVE", branchId = null;
+        let accountNumber, ownerName, balance = 0, status = "ACTIVE", branchId = null, email = null;
 
         if (typeof args[0] === "number") {
             accountNumber = args[1];
@@ -14,18 +14,23 @@ class AccountService {
             balance = args[3] || 0;
             branchId = args[4];
             status = args[5] || "ACTIVE";
+            email = args[6] || null;
         } else if (typeof args[0] === "object" && args[0] !== null && !Array.isArray(args[0])) {
-            ({ accountNumber, ownerName, balance = 0, branchId, status = "ACTIVE" } = args[0]);
+            ({ accountNumber, ownerName, balance = 0, branchId, status = "ACTIVE", email = null } = args[0]);
         } else {
             accountNumber = args[0];
             ownerName = args[1];
             balance = args[2] || 0;
             branchId = args[3];
             status = args[4] || "ACTIVE";
+            email = args[5] || null;
         }
 
         if (!accountNumber || !ownerName) {
             throw new Error("Thiếu thông tin tài khoản.");
+        }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+            throw new Error("Email khách hàng là bắt buộc và phải hợp lệ.");
         }
 
         const branchService = require("./BranchService");
@@ -49,26 +54,29 @@ class AccountService {
         account.branchId = Number(branchId);
         account.bankId = Number(branch.bankId);
 
-<<<<<<< HEAD
-        return accountRepository.create(account);
-=======
         const created = await accountRepository.create(account);
 
-        // Tự động tạo login khách hàng (username = số TK, mật khẩu mặc định)
+        // Tự động tạo login khách hàng (username = số TK, email riêng, mật khẩu mặc định)
         try {
             const customerService = require("./CustomerService");
-            const customer = await customerService.createForAccount(created);
+            const customer = await customerService.createForAccount(created, email);
             created.customerLogin = {
                 username: customer.username,
+                email: customer.email || String(email).trim().toLowerCase(),
                 defaultPassword: customer._defaultPassword || customerService.getDefaultPassword(),
                 mustChangePassword: true
             };
         } catch (err) {
-            console.warn("[Account] Tạo customer login thất bại:", err.message);
+            // Rollback account nếu không tạo được customer (bắt buộc có email)
+            try {
+                await accountRepository.delete(created.id);
+            } catch {
+                /* ignore */
+            }
+            throw new Error(err.message || "Không thể tạo tài khoản khách hàng.");
         }
 
         return created;
->>>>>>> feature/v2_user
     }
 
     async cleanupOrphanAccounts() {
